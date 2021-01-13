@@ -1,5 +1,5 @@
 class CompaniesController < ApplicationController
-  before_action :set_company, except: [:index, :create, :new]
+  before_action :set_company, except: [:index, :create, :new, :destroy]
 
   def index
     @companies = Company.all
@@ -10,6 +10,11 @@ class CompaniesController < ApplicationController
   end
 
   def show
+    if !@company.zip_code.nil?
+      @zip_code_params = ZipCodes.identify(@company.zip_code)
+      @company.city = @zip_code_params && @zip_code_params[:city]
+      @company.state = @zip_code_params && @zip_code_params[:state_code] + " or " + @zip_code_params[:state_name]
+    end
   end
 
   def create
@@ -17,7 +22,7 @@ class CompaniesController < ApplicationController
     if @company.save
       redirect_to companies_path, notice: "Saved"
     else
-      render :new
+      render :new, notice: "Oops, Something went wrong!"
     end
   end
 
@@ -28,9 +33,17 @@ class CompaniesController < ApplicationController
     if @company.update(company_params)
       redirect_to companies_path, notice: "Changes Saved"
     else
-      render :edit
+      render :edit, notice: "Oops, Something went wrong!"
     end
   end  
+
+  # Deleting a company with an ID being passed
+  def destroy
+    @company = Company.find(params[:id])
+    @company_name = @company.name
+    @company.destroy
+    redirect_to companies_path, notice: "Company: #{@company_name} was successfully deleted!"
+  end
 
   private
 
@@ -40,6 +53,7 @@ class CompaniesController < ApplicationController
       :legal_name,
       :description,
       :zip_code,
+      :color,
       :phone,
       :email,
       :owner_id,
@@ -49,6 +63,9 @@ class CompaniesController < ApplicationController
 
   def set_company
     @company = Company.find(params[:id])
+    if @company.color.nil?
+      @company.color = Rails.configuration.default_background_color
+    end
   end
   
 end
